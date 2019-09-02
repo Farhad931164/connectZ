@@ -1,4 +1,9 @@
+"""
+    Game main script file
+"""
+
 import utils.input_reader
+
 from utils.argument_reader import check_input_file
 from contracts.outputs import GameOutputs
 from connectz_engine.connectz_game import ConnectZGame
@@ -6,44 +11,34 @@ from connectz_engine.connectz_game import IllegalGameSpecError, IllegalColumnErr
 
 
 def main():
-    input_file = check_input_file()
+    input_file = check_input_file()  # checking the input file
     if input_file is None:
         print("Provide one input file")
     else:  # command line argument exists
         try:
-            input_file_reader = utils.input_reader.FileReader(input_file)
+            input_file_reader = utils.input_reader.FileReader(input_file)  # Instantiating input FileReader
             game = ConnectZGame(input_file_reader.game_specs)
-
-            winner = GameOutputs.INCOMPLETE  # default result, otherwise game engine should raise something
+            game_output = GameOutputs.INCOMPLETE  # default result, otherwise game engine should raise something
 
             for line in input_file_reader:
-                winner = game.drop(line-1)
+                game_output = game.drop(line - 1)  # 1 indexed column converted to 0 indexed column
 
-            output = winner
+            output = game_output
 
-        except FileNotFoundError:
+        except FileNotFoundError:  # Python file not found error
             output = GameOutputs.FILE_ERROR
-        except utils.input_reader.FileContentError:
+        except utils.input_reader.FileContentError:  # Internal exception when file content is bad
             output = GameOutputs.INVALID_FILE
-        except IllegalGameSpecError:
+        except IllegalGameSpecError:  # Illegal game size
             output = GameOutputs.ILLEGAL_GAME
-        except IllegalRowError:
+        except IllegalRowError:  # Bad row
             output = GameOutputs.ILLEGAL_ROW
-        except IllegalColumnError:
+        except IllegalColumnError:  # Bad column
             output = GameOutputs.ILLEGAL_COL
-        except IllegalContinue:
+        except IllegalContinue:  # Illegal continue when the game has finished already
             output = GameOutputs.ILLEGAL_CONTINUE
 
-        print(f"output : {output}")
-
-        for row in game._game_bed:
-            for col in row:
-                if col is not None:
-                    print(str(col), '| ', end='')
-                else:
-                    print('  | ', end='')
-            print('')
-
+        print(f"{output}")
 
 if __name__ == '__main__':
     main()

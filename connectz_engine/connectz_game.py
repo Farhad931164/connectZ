@@ -1,3 +1,6 @@
+"""
+    The connect Z game module
+"""
 from connectz_engine.player import Player
 from contracts.outputs import GameOutputs
 
@@ -38,18 +41,25 @@ class ConnectZGame:
 
     def __init__(self, game_specs):
         self._cols, self._rows, self._connects = game_specs
-        self._check_game_size()
-        self._player1 = True
-        self._game_bed = [[None] * self._cols for _ in range(self._rows)]
-        self._row_tracker = [self._rows] * self._cols
-        self._game_status = None
+        self._check_game_size()  # check the game size
+        self._player1 = True  # the player that start the game
+        self._game_bed = [[None] * self._cols for _ in range(self._rows)]  # Game bed, saving position of players
+        self._row_tracker = [self._rows] * self._cols  # row tracker, how many drops on each column
+        self._game_status = None  # current game status
 
     def _check_game_size(self):
         if self._connects > max(self._cols, self._rows):  # not a valid game spec
-            raise IllegalGameSpecError
+            raise IllegalGameSpecError  # raise exception
 
-    def _get_player(self, row_col, offest=(0, 0), player1=True):
-        row_col = (row_col[0] - offest[0], row_col[1] - offest[1])
+    def _get_player(self, row_col, offset=(0, 0), player1=True):
+        """
+        A function to help accessing neighbours
+        :param row_col: Tuple(row, col)
+        :param offset: Direction
+        :param player1: Just choose same player
+        :return: A valid neighbour otherwise None
+        """
+        row_col = (row_col[0] - offset[0], row_col[1] - offset[1])
         if min(row_col) < 0:
             return None
 
@@ -65,7 +75,11 @@ class ConnectZGame:
                 return neighbour
 
     def _find_all_neighbours(self, player: Player):
-        # checking all directions around the current drop except north
+        """
+        Finding all neighbours of the new player
+        :param player: New player object
+        :return: vertical, horizontal and diagonal friends only
+        """
         row_col = player.row_col
         player1 = player.player1
 
@@ -86,13 +100,20 @@ class ConnectZGame:
         diag_neighbours.append(self._get_player(row_col, Neighbours.NORTH_EAST, player1))
         diag_neighbours.append(self._get_player(row_col, Neighbours.SOUTH_EAST, player1))
 
+        # getting rid of None elements, was easier to have loads of if else
         ver_neighbours = [n for n in ver_neighbours if n is not None]
         hor_neighbours = [n for n in hor_neighbours if n is not None]
         diag_neighbours = [n for n in diag_neighbours if n is not None]
 
         return ver_neighbours, hor_neighbours, diag_neighbours
 
-    def create_join_merge_groups(self, player, neighbours):
+    def _create_join_merge_groups(self, player, neighbours):
+        """
+        This function, create, join and merge groups
+        :param player: new player
+        :param neighbours: all friend neighbours around
+        :return: None
+        """
         new_vert_groups = []
         new_hori_groups = []
         new_diag_groups = []
@@ -112,45 +133,60 @@ class ConnectZGame:
                 if soldier.diagonal_join(player) is None:  # unable to join diagonal friend, need to create new group
                     new_diag_groups.append(soldier)
 
-        for friend in new_vert_groups:
+        for friend in new_vert_groups:  # let's try creating a new group with vertical friends
             player.create_vertical_group_with(friend)
 
-        for friend in new_hori_groups:
+        for friend in new_hori_groups: # let's try creating a new group with horizontal friends
             player.create_horizontal_group_with(friend)
 
-        for friend in new_diag_groups:
+        for friend in new_diag_groups: # let's try creating a new group with diagonal friends
             player.create_diagonal_group_with(friend)
 
     def drop(self, col):
+        """
+        Drop coin function
+        :param col: the column that drop will happen on
+        :return: Game status
+        """
+        if self._game_status == GameOutputs.PLAYER1_WIN or \
+                self._game_status == GameOutputs.PLAYER2_WIN or self._game_status == GameOutputs.DRAW:
+            raise IllegalContinue  # if game has already have a winner or draw
 
-        if self._game_status == GameOutputs.PLAYER1_WIN or self._game_status == GameOutputs.PLAYER2_WIN or self._game_status == GameOutputs.DRAW:
-            raise IllegalContinue
-
-        if col >= self._cols:
+        if col >= self._cols:  # wrong column
             raise IllegalColumnError
 
         self._row_tracker[col] -= 1  # update the select column row number
         row = self._row_tracker[col]  # selected row
 
-        if row < 0:
+        if row < 0:  # out of game space
             raise IllegalRowError
 
-        new_player = Player(row, col, self._player1, self._connects)
-        self._game_bed[row][col] = new_player
+        new_player = Player(row, col, self._player1, self._connects)  # creating a new soldier, player
+        self._game_bed[row][col] = new_player  # sitting the soldier on the board
 
         try:
-            self.create_join_merge_groups(new_player, self._find_all_neighbours(new_player))
+            self._create_join_merge_groups(new_player, self._find_all_neighbours(new_player))  # let's find and join
+            # friends or creating a new group with them
         except Draw:
             self._game_status = GameOutputs.DRAW
         except PlayerWin:
             self._game_status = GameOutputs.PLAYER1_WIN if self._player1 else GameOutputs.PLAYER2_WIN
 
-        self._player1 = not self._player1  # toggle players
+        self._player1 = not self._player1  # Toggle player
 
         if self._game_status != GameOutputs.PLAYER1_WIN and self._game_status != GameOutputs.PLAYER2_WIN:
-            if sum(self._row_tracker) == 0:
+            if sum(self._row_tracker) == 0:  # All columns filled
                 self._game_status = GameOutputs.DRAW
-            else:
+            else:  # still some empty columns to play
                 self._game_status = GameOutputs.INCOMPLETE
 
         return self._game_status
+
+    def print_game_board(self):
+        for row in self._game_bed:
+            for col in row:
+                if col is not None:
+                    print(str(col), '| ', end='')
+                else:
+                    print('  | ', end='')
+            print('')
