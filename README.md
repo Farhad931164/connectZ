@@ -24,9 +24,11 @@ The input file should contain the game size in the first line. The rest of file 
 2 `Player1`
 3 `Player2`
 1 `Player1`
-|  |  |  |
-|--|--|--|
+
+|˅| ˅| ˅|
+|:--:|:--:|:--:|
 |X | | |
 |X |O |X |
 |X |O |X |
+
 Player 1, won the game !!!
