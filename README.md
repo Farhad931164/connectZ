@@ -25,7 +25,7 @@ The input file should contain the game size in the first line. The rest of file 
 3 `Player2`
 1 `Player1`
 
-|˅| ˅| ˅|
+|▼| ▼| ▼|
 |:--:|:--:|:--:|
 |X | | |
 |X |O |X |
